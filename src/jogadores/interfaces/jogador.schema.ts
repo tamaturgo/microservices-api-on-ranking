@@ -1,10 +1,7 @@
 import * as mongoose from "mongoose";
 
 export const JogadorSchema = new mongoose.Schema({
-    phoneNumber: {
-        type: String,
-        unique: true,
-    },
+    phoneNumber: String,
     email: {
         type: String,
         unique: true,
