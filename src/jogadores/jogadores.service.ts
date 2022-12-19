@@ -47,6 +47,7 @@ export class JogadoresService {
     async deletePlayer(_id: string): Promise<any> {
         const founded = await this.jogadorModel.findOne({ _id }).exec();
         if (!founded) {
+            console.log("Player not found");
             throw new NotFoundException(`jogador com o id (${_id}) não existe`);
         }
         return await this.jogadorModel.deleteOne({ _id }).exec();
