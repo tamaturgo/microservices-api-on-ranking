@@ -1,64 +1,57 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { CreatePlayerDTO } from './dtos/criar-jogador.dto';
 import { Jogador } from './interfaces/jogador.interface';
-import {v4 as uuidv4} from 'uuid';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { UpdatePlayerDTO } from './dtos/atualizar-jogador.dto';
 
 @Injectable()
 export class JogadoresService {
-    private players: Jogador[] = [];
-    private readonly logger = new Logger(JogadoresService.name)
-    
-    async CreateAndUpdatePlayer(CreatePlayerDTO: CreatePlayerDTO): Promise<void> {
-        
-        const {email} = CreatePlayerDTO
-        // Verifica se o jogador já existe
-        const founded = await this.players.find(jogador => jogador.email === email);
+    constructor(@InjectModel('Jogadores') private readonly jogadorModel: Model<Jogador>) { }
 
-        if(founded){
-            await this.updatePlayer(CreatePlayerDTO, founded)
-        }else{
-            await this.createPlayer(CreatePlayerDTO);
+
+    async CreatePlayer(CreatePlayerDTO: CreatePlayerDTO): Promise<Jogador> {
+        const { email } = CreatePlayerDTO
+        const founded = await this.jogadorModel.findOne({ email })
+        if (founded) {
+            throw new BadRequestException(`Jogador com e-mail: ${email} já está cadastrado.`)
         }
+        const created = new this.jogadorModel(CreatePlayerDTO);
+        return await created.save();
     }
-    
-    
-    private async createPlayer(CreatePlayerDTO: CreatePlayerDTO): Promise<void>  {
-        const { name, phoneNumber, email } = CreatePlayerDTO;
-        
-        const player: Jogador = {
-            _id : uuidv4(),
-            name,
-            phoneNumber,
-            email,
-            ranking: "A",
-            rankingPosition: 1,
-            photoUrl: "www.google.com.br/foto123.jpg"
+
+    async UpdatePlayer(UpdatePlayerDTO: UpdatePlayerDTO, _id: string): Promise<Jogador> {
+        const founded = await this.jogadorModel.findOne({ _id }).exec();
+
+        if (!founded) {
+            throw new NotFoundException(`jogador com o id (${_id}) não existe`);
         }
-        this.logger.log(`CreatePlayerDTO:  ${JSON.stringify(player)}`)
-        this.players.push(player);
-        
+        return await this.jogadorModel.findOneAndUpdate(
+            { _id },
+            { $set: UpdatePlayerDTO }
+        ).exec();
     }
 
-
-    private async updatePlayer(UpdatePlayerDTO: CreatePlayerDTO, foundedPlayer: Jogador): Promise<void> {
-        const {name, phoneNumber} = UpdatePlayerDTO
-
-        foundedPlayer.name =  name;
-        foundedPlayer.phoneNumber = phoneNumber
-    
+    async getAllPlayers(): Promise<Jogador[]> {
+        return await this.jogadorModel.find().exec();
     }
-    
-    
-    async getAllPlayers():Promise<Jogador[]> {
-        
 
-        return await this.players;
+    async getPlayerById(_id: string): Promise<Jogador> {
+        const founded = await this.jogadorModel.findOne({ _id }).exec();
+        if (!founded) {
+            throw new NotFoundException(`jogador com o id (${_id}) não existe`);
+        }
+        return founded;
+    }
+
+    async deletePlayer(_id: string): Promise<any> {
+        const founded = await this.jogadorModel.findOne({ _id }).exec();
+        if (!founded) {
+            console.log("Player not found");
+            throw new NotFoundException(`jogador com o id (${_id}) não existe`);
+        }
+        return await this.jogadorModel.deleteOne({ _id }).exec();
     }
 }
 
-/*
-!!!!!!!!
-? PAREI NA AULA 15
-*  link: https://www.udemy.com/course/construindo-um-backend-escalavel-com-nestjs-aws-e-pivotalws/learn/lecture/21049836#notes
-!!!!!!! 
-*/
+

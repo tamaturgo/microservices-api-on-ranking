@@ -1,5 +1,6 @@
-export interface Jogador{
-    readonly _id:string;
+import { Document } from "mongoose";
+
+export interface Jogador extends Document {
     phoneNumber: string;
     readonly email: string;
     name: string;
